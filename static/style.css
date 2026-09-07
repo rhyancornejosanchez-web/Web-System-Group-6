@@ -616,3 +616,27 @@ tbody tr:hover { background: rgba(27,45,79,0.035); }
   border-top: 1px solid var(--border);
   padding-top: 8px;
 }
+
+/* ── PASSWORD SHOW/HIDE ──────────────────────────────────────────────────────── */
+.password-field { position: relative; }
+.password-field input { padding-right: 60px; }
+.password-toggle {
+  position: absolute;
+  top: 50%; right: 8px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'Sora', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--text-mid);
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.password-toggle:hover { opacity: 1; }
+.login-form-card .password-toggle { color: var(--gold-light); }
