@@ -1,15 +1,15 @@
+import os
 import click
 from flask.cli import with_appcontext
-from models import db, User, Unit, RentRecord
-from utils import hash_password
-from datetime import date
+from models import get_db, init_db, DB_PATH
 
 @click.command('reset-db')
 @with_appcontext
 def reset_db():
-    """Reset the database."""
-    db.drop_all()
-    db.create_all()
+    """Reset the database (deletes the sqlite file and re-seeds)."""
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+    init_db()
     from seed import seed_data
     seed_data()
     click.echo('Database reset and seeded.')
@@ -18,6 +18,8 @@ def reset_db():
 @with_appcontext
 def list_users():
     """List all users."""
-    users = User.query.all()
+    conn = get_db()
+    users = conn.execute("SELECT * FROM user").fetchall()
+    conn.close()
     for u in users:
-        click.echo(f"{u.id}: {u.username} ({u.role}) — {u.full_name}")
+        click.echo(f"{u['id']}: {u['username']} ({u['role']}) — {u['full_name']}")

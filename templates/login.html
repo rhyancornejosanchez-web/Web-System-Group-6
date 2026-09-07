@@ -39,8 +39,8 @@
       <p class="login-form-sub">Sign in to your portal</p>
 
       <div class="role-toggle">
-        <button class="role-btn active" type="button">👤 Tenant</button>
-        <button class="role-btn" type="button">🏠 Landlord</button>
+        <button type="button" class="role-btn active" data-role="tenant" onclick="selectRole(this)">👤 Tenant</button>
+        <button type="button" class="role-btn" data-role="landlord" onclick="selectRole(this)">🏠 Landlord</button>
       </div>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -50,6 +50,7 @@
       {% endwith %}
 
       <form method="POST" action="{{ url_for('main.login') }}">
+        <input type="hidden" name="role" id="loginRoleInput" value="tenant">
         <div class="form-group">
           <label>Username</label>
           <input type="text" name="username" placeholder="Enter your username" autocomplete="username" required>
@@ -69,11 +70,10 @@
 </div>
 
 <script>
-document.querySelectorAll('.role-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-});
+function selectRole(btn) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('loginRoleInput').value = btn.dataset.role;
+}
 </script>
 {% endblock %}

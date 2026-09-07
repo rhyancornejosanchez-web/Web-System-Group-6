@@ -33,6 +33,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username','').strip()
         password = request.form.get('password','')
+        selected_role = request.form.get('role', 'tenant')
         if not username or not password:
             flash('Username and password required.', 'danger')
             return render_template('login.html')
@@ -40,6 +41,9 @@ def login():
         user = row_to_dict(conn.execute("SELECT * FROM user WHERE username=?", (username,)).fetchone())
         conn.close()
         if user and check_password(password, user['password']):
+            if user['role'] != selected_role:
+                flash(f"This account is registered as a {user['role']}. Please switch the toggle to \"{user['role'].capitalize()}\" and sign in again.", 'warning')
+                return render_template('login.html')
             session['user_id'] = user['id']
             session['user_role'] = user['role']
             session['user_name'] = user['full_name']
@@ -57,15 +61,13 @@ def register():
         full_name= request.form.get('full_name','').strip()
         email    = request.form.get('email','').strip()
         phone    = request.form.get('phone','').strip()
-        role     = request.form.get('role','tenant')
+        role     = 'tenant'  # Only tenants can self-register; there is only ever one landlord.
         if not username or not password or not full_name:
             flash('Username, full name, and password are required.', 'danger')
             return render_template('register.html')
         if password != confirm:
             flash('Passwords do not match.', 'danger')
             return render_template('register.html')
-        if role not in ('tenant', 'landlord'):
-            role = 'tenant'
         conn = get_db()
         existing = conn.execute("SELECT id FROM user WHERE username=?", (username,)).fetchone()
         if existing:

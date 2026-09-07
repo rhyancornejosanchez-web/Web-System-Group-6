@@ -11,6 +11,11 @@ def create_app():
     init_db()
     from seed import seed_data
     seed_data()
+
+    from cli_command import reset_db, list_users
+    app.cli.add_command(reset_db)
+    app.cli.add_command(list_users)
+
     return app
 
 app = create_app()

@@ -13,7 +13,7 @@
         Join<br><em>NestHub today.</em>
       </h1>
       <p class="login-hero-sub">
-        Create your account as a tenant or landlord and start managing your apartment experience seamlessly.
+        Create your tenant account and start managing your apartment experience seamlessly.
       </p>
       <div class="login-stat-row">
         <div class="login-stat">
@@ -36,7 +36,7 @@
   <div class="login-right">
     <div class="login-form-card">
       <h2 class="login-form-title">Create Account</h2>
-      <p class="login-form-sub">Choose your role and fill in your details</p>
+      <p class="login-form-sub">Fill in your details to get started as a tenant</p>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
@@ -45,27 +45,6 @@
       {% endwith %}
 
       <form method="POST" action="{{ url_for('main.register') }}">
-        <!-- Role Selection -->
-        <div class="form-group">
-          <label>I am a</label>
-          <div class="register-role-row">
-            <label class="register-role-card">
-              <input type="radio" name="role" value="tenant" checked>
-              <div class="register-role-inner">
-                <span class="register-role-icon">👤</span>
-                <span class="register-role-label">Tenant</span>
-              </div>
-            </label>
-            <label class="register-role-card">
-              <input type="radio" name="role" value="landlord">
-              <div class="register-role-inner">
-                <span class="register-role-icon">🏠</span>
-                <span class="register-role-label">Landlord</span>
-              </div>
-            </label>
-          </div>
-        </div>
-
         <div class="form-group">
           <label>Full Name</label>
           <input type="text" name="full_name" placeholder="Your full name" required>

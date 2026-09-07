@@ -11,7 +11,11 @@ def seed_data():
         return
 
     c.execute("INSERT INTO user (username,password,role,full_name,email,phone) VALUES (?,?,?,?,?,?)",
-        ('landlord', hash_password('admin123'), 'landlord', 'Maria Santos', 'maria@apartments.ph', '09171234567'))
+        ('martin', hash_password('landlord123'), 'landlord', 'Martin', 'martin@apartments.ph', '09171234567'))
+    c.execute("INSERT INTO user (username,password,role,full_name,email,phone) VALUES (?,?,?,?,?,?)",
+        ('maica', hash_password('landlord123'), 'landlord', 'Maica', 'maica@apartments.ph', '09171234567'))
+    c.execute("INSERT INTO user (username,password,role,full_name,email,phone) VALUES (?,?,?,?,?,?)",
+        ('rhyan', hash_password('landlord123'), 'landlord', 'Rhyan', 'rhyan@apartments.ph', '09171234567'))
     c.execute("INSERT INTO user (username,password,role,full_name,email,phone) VALUES (?,?,?,?,?,?)",
         ('tenant1', hash_password('tenant123'), 'tenant', 'Juan dela Cruz', 'juan@email.com', '09181234567'))
     c.execute("INSERT INTO user (username,password,role,full_name,email,phone) VALUES (?,?,?,?,?,?)",
