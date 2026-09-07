@@ -1,3 +1,5 @@
+import os
+import webbrowser
 from flask import Flask
 from models import init_db
 from views import main_bp
@@ -14,4 +16,8 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
+    # WERKZUEG_RUN_MAIN ensures the browser only opens once and not on Flask debug reloads
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        webbrowser.open("http://127.0.0.1:5000/login")
+
     app.run(debug=True)
