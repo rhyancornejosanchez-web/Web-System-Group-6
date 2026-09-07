@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import landlord_sidebar %}
+{% block title %}Dashboard — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ landlord_sidebar(user, 'dashboard', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p>Welcome back, {{ user.full_name }}. Here's your property overview.</p>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon navy">🏢</div>
+        <div><div class="stat-value">{{ units|length }}</div><div class="stat-label">Total Units</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon rose">🔒</div>
+        <div><div class="stat-value">{{ occupied }}</div><div class="stat-label">Occupied</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon teal">✅</div>
+        <div><div class="stat-value">{{ available }}</div><div class="stat-label">Available</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon {{ 'rose' if unread_msgs > 0 else 'blue' }}">✉️</div>
+        <div><div class="stat-value">{{ unread_msgs }}</div><div class="stat-label">Unread Messages</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon {{ 'rose' if overdue_count > 0 else 'gold' }}">💰</div>
+        <div><div class="stat-value">{{ overdue_count }}</div><div class="stat-label">Overdue Rents</div></div>
+      </div>
+    </div>
+
+    <div class="mt-6">
+      <div class="page-header-row" style="margin-bottom:14px;">
+        <div class="section-title" style="margin-bottom:0;">Quick Actions</div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="{{ url_for('main.landlord_units') }}" class="btn btn-gold">🏠 Manage Units</a>
+        <a href="{{ url_for('main.landlord_tenants') }}" class="btn btn-outline">👥 View Tenants</a>
+        <a href="{{ url_for('main.landlord_messages') }}" class="btn btn-outline">
+          ✉️ Messages{% if unread_msgs > 0 %} <span class="inline-badge">{{ unread_msgs }}</span>{% endif %}
+        </a>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import tenant_sidebar %}
+{% block title %}New Message — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ tenant_sidebar(user, 'messages', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header-row">
+      <div class="page-header" style="margin-bottom:0;">
+        <h1>Send Message</h1>
+        <p>Contact your landlord</p>
+      </div>
+      <a href="{{ url_for('main.tenant_messages') }}" class="btn btn-outline btn-sm">← Back</a>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="form-card">
+      <form method="POST" action="{{ url_for('main.tenant_message') }}">
+        <div class="form-field">
+          <label>Subject</label>
+          <input type="text" name="subject" placeholder="Brief subject of your message" required>
+        </div>
+        <div class="form-field">
+          <label>Message</label>
+          <textarea name="body" rows="6" placeholder="Type your concern or message here…" required></textarea>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button type="submit" class="btn btn-gold">📨 Send Message</button>
+          <a href="{{ url_for('main.tenant_messages') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

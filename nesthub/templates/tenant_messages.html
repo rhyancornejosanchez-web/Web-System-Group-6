@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import tenant_sidebar %}
+{% block title %}Messages — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ tenant_sidebar(user, 'messages', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header-row">
+      <div class="page-header" style="margin-bottom:0;">
+        <h1>Messages</h1>
+        <p>Your conversation with the landlord</p>
+      </div>
+      <a href="{{ url_for('main.tenant_message') }}" class="btn btn-gold btn-sm">+ New Message</a>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% if messages %}
+    <div class="message-list">
+      {% for msg in messages %}
+      <div class="message-item {% if not msg.is_read and msg.sender_id != user.id %}unread{% endif %}">
+        <div class="message-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="message-from">{% if msg.sender_id == user.id %}To: Landlord{% else %}From: Landlord{% endif %}</span>
+            <span class="unit-badge badge-{{ msg.message_type }}" style="position:static;display:inline-block;">{{ msg.message_type | capitalize }}</span>
+            {% if msg.unit_number %}<span style="font-size:12px;color:var(--text-muted);">Unit {{ msg.unit_number }}</span>{% endif %}
+          </div>
+          <span class="message-time">{{ msg.created_at[:16] }}</span>
+        </div>
+        <div class="message-subject">{{ msg.subject }}</div>
+        <div class="message-preview" style="margin-top:5px;">{{ msg.body }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">✉️</div>
+        <p>No messages yet</p>
+        <div class="mt-4">
+          <a href="{{ url_for('main.tenant_message') }}" class="btn btn-gold btn-sm">Send First Message</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

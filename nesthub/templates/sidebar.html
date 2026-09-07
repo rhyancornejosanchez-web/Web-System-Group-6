@@ -1,0 +1,78 @@
+{% macro tenant_sidebar(user, active, unread_msgs=0) %}
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo-row">
+      <div class="logo-box">🏠</div>
+      <div>
+        <h2>Nest<span>Hub</span></h2>
+        <p>Tenant Portal</p>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-avatar">{{ user.full_name[0] }}</div>
+    <div>
+      <div class="user-name">{{ user.full_name }}</div>
+      <div class="user-role">Tenant</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="{{ url_for('main.tenant_dashboard') }}" class="nav-item {% if active == 'dashboard' %}active{% endif %}">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <a href="{{ url_for('main.tenant_units') }}" class="nav-item {% if active == 'units' %}active{% endif %}">
+      <span class="nav-icon">🏠</span> Browse Units
+    </a>
+    <div class="nav-section-label">Account</div>
+    <a href="{{ url_for('main.tenant_messages') }}" class="nav-item {% if active == 'messages' %}active{% endif %}">
+      <span class="nav-icon">✉️</span> Messages
+      {% if unread_msgs > 0 %}<span class="nav-badge">{{ unread_msgs }}</span>{% endif %}
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="{{ url_for('main.logout') }}" class="logout-btn">🚪 Sign Out</a>
+  </div>
+</aside>
+{% endmacro %}
+
+{% macro landlord_sidebar(user, active, unread_msgs=0) %}
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo-row">
+      <div class="logo-box">🏠</div>
+      <div>
+        <h2>Nest<span>Hub</span></h2>
+        <p>Landlord Portal</p>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-avatar">{{ user.full_name[0] }}</div>
+    <div>
+      <div class="user-name">{{ user.full_name }}</div>
+      <div class="user-role gold">Landlord</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="{{ url_for('main.landlord_dashboard') }}" class="nav-item {% if active == 'dashboard' %}active{% endif %}">
+      <span class="nav-icon">📊</span> Dashboard
+    </a>
+    <a href="{{ url_for('main.landlord_units') }}" class="nav-item {% if active == 'units' %}active{% endif %}">
+      <span class="nav-icon">🏠</span> Manage Units
+    </a>
+    <a href="{{ url_for('main.landlord_tenants') }}" class="nav-item {% if active == 'tenants' %}active{% endif %}">
+      <span class="nav-icon">👥</span> Tenants
+    </a>
+    <div class="nav-section-label">Communications</div>
+    <a href="{{ url_for('main.landlord_messages') }}" class="nav-item {% if active == 'messages' %}active{% endif %}">
+      <span class="nav-icon">✉️</span> Messages
+      {% if unread_msgs > 0 %}<span class="nav-badge">{{ unread_msgs }}</span>{% endif %}
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <a href="{{ url_for('main.logout') }}" class="logout-btn">🚪 Sign Out</a>
+  </div>
+</aside>
+{% endmacro %}

@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import tenant_sidebar %}
+{% block title %}Inquire — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ tenant_sidebar(user, 'units', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header-row">
+      <div class="page-header" style="margin-bottom:0;">
+        <h1>Unit Inquiry</h1>
+        <p>Send a message to the landlord about this unit</p>
+      </div>
+      <a href="{{ url_for('main.tenant_units') }}" class="btn btn-outline btn-sm">← Back to Units</a>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="inquire-card">
+      <div class="inquire-unit-header">
+        <h2>Unit {{ unit.unit_number }}</h2>
+        <p>{{ unit.unit_type }} · Floor {{ unit.floor }}</p>
+        <div class="inquire-unit-rent">₱{{ "{:,.0f}".format(unit.monthly_rent) }}<span style="font-size:14px;font-family:'Sora',sans-serif;opacity:0.7;">/month</span></div>
+        {% if unit.amenities %}
+        <div class="unit-amenities" style="margin-top:10px;">
+          {% for a in unit.amenities.split(',') %}
+            <span class="amenity-tag" style="background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.25);color:rgba(255,255,255,0.85);">{{ a.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <form method="POST">
+        <div class="form-field">
+          <label>Subject</label>
+          <input type="text" name="subject" placeholder="e.g. Inquiry about Unit {{ unit.unit_number }}" required>
+        </div>
+        <div class="form-field">
+          <label>Message</label>
+          <textarea name="body" rows="5" placeholder="Hi, I'm interested in this unit. I'd like to know…" required></textarea>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button type="submit" class="btn btn-gold">📨 Send Inquiry</button>
+          <a href="{{ url_for('main.tenant_units') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

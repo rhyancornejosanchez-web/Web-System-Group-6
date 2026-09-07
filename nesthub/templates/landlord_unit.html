@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import landlord_sidebar %}
+{% block title %}Manage Units — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ landlord_sidebar(user, 'units', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header-row">
+      <div class="page-header" style="margin-bottom:0;">
+        <h1>Manage Units</h1>
+        <p>Add, edit, assign tenants, or remove units</p>
+      </div>
+      <a href="{{ url_for('main.landlord_add_unit') }}" class="btn btn-gold">+ Add New Unit</a>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Fetch all tenants for the assign modals -->
+    {% set ns = namespace(all_tenants=[]) %}
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Unit</th>
+            <th>Floor</th>
+            <th>Type</th>
+            <th>Monthly Rent</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Tenant</th>
+            <th>Occupancy Start</th>
+            <th>Due Day</th>
+            <th>Amenities</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for unit in units %}
+          <tr>
+            <td><strong style="font-size:15px;color:var(--navy);">{{ unit.unit_number }}</strong></td>
+            <td>{{ unit.floor }}</td>
+            <td>{{ unit.unit_type }}</td>
+            <td style="font-weight:700;color:var(--gold);">₱{{ "{:,.0f}".format(unit.monthly_rent) }}</td>
+            <td style="font-size:12px;color:var(--text-muted);max-width:140px;">{{ (unit.description or '—')[:60] }}{% if unit.description and unit.description|length > 60 %}…{% endif %}</td>
+            <td>
+              <span class="unit-badge {{ 'badge-occupied' if unit.is_occupied else 'badge-available' }}" style="position:static;display:inline-block;">
+                {{ 'Occupied' if unit.is_occupied else 'Available' }}
+              </span>
+            </td>
+            <td style="font-size:13px;">{{ unit.tenant_name or '—' }}</td>
+            <td style="font-size:12px;color:var(--text-muted);">{{ unit.occupancy_start or '—' }}</td>
+            <td style="font-size:12px;color:var(--text-muted);">{% if unit.monthly_due_day %}Day {{ unit.monthly_due_day }}{% else %}—{% endif %}</td>
+            <td style="font-size:12px;color:var(--text-muted);max-width:160px;">{{ unit.amenities or '—' }}</td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <a href="{{ url_for('main.landlord_edit_unit', unit_id=unit.id) }}" class="btn btn-outline btn-xs">✏️ Edit</a>
+                {% if not unit.is_occupied %}
+                  <button class="btn btn-gold btn-xs" onclick="openOccupyModal({{ unit.id }}, '{{ unit.unit_number }}')">✅ Occupy</button>
+                  <form method="POST" action="{{ url_for('main.landlord_delete_unit', unit_id=unit.id) }}" onsubmit="return confirm('Delete Unit {{ unit.unit_number }}?');" style="display:inline;">
+                    <button type="submit" class="btn btn-danger btn-xs">🗑</button>
+                  </form>
+                {% else %}
+                  <form method="POST" action="{{ url_for('main.landlord_set_occupancy', unit_id=unit.id) }}" onsubmit="return confirm('Mark Unit {{ unit.unit_number }} as vacated?');" style="display:inline;">
+                    <input type="hidden" name="action" value="vacate">
+                    <button type="submit" class="btn btn-danger btn-xs">🚪 Vacate</button>
+                  </form>
+                  <button class="btn btn-outline btn-xs" disabled style="opacity:0.35;cursor:not-allowed;">🗑</button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Occupy Modal -->
+<div id="occupyModal" class="modal-backdrop" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-title">✅ Set Unit Occupancy</div>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:18px;">Assign a tenant and set the occupancy start date and monthly due day.</p>
+    <form method="POST" id="occupyForm">
+      <input type="hidden" name="action" value="occupy">
+      <div class="form-group">
+        <label>Unit</label>
+        <input type="text" id="occupyUnitLabel" disabled style="background:var(--bg);color:var(--text-muted);">
+      </div>
+      <div class="form-group">
+        <label>Select Tenant</label>
+        <select name="tenant_id" id="occupyTenantSelect" required>
+          <option value="">— Choose tenant —</option>
+          {% for unit in units %}
+            {# We'll populate this via JS from server-rendered data #}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Occupancy Start Date</label>
+        <input type="date" name="occupancy_start" id="occupyStartDate" required>
+      </div>
+      <div class="form-group">
+        <label>Monthly Due Day <span style="color:var(--text-muted);font-size:11px;">(1–28)</span></label>
+        <input type="number" name="monthly_due_day" id="occupyDueDay" min="1" max="28" value="1" required>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button type="submit" class="btn btn-gold">Confirm Occupancy</button>
+        <button type="button" class="btn btn-outline" onclick="closeOccupyModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tenants JSON for modal -->
+<script>
+const TENANTS_DATA = {{ tenants_json|safe }};
+
+function openOccupyModal(unitId, unitNumber) {
+  document.getElementById('occupyModal').style.display = 'flex';
+  document.getElementById('occupyUnitLabel').value = 'Unit ' + unitNumber;
+  document.getElementById('occupyForm').action = '/landlord/units/set_occupancy/' + unitId;
+  // Populate tenants
+  var sel = document.getElementById('occupyTenantSelect');
+  sel.innerHTML = '<option value="">— Choose tenant —</option>';
+  TENANTS_DATA.forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.full_name + ' (@' + t.username + ')';
+    sel.appendChild(opt);
+  });
+  // Set today as default
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('occupyStartDate').value = today;
+}
+function closeOccupyModal() {
+  document.getElementById('occupyModal').style.display = 'none';
+}
+document.getElementById('occupyModal').addEventListener('click', function(e){
+  if(e.target === this) closeOccupyModal();
+});
+</script>
+{% endblock %}

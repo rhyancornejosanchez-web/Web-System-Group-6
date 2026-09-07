@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import tenant_sidebar %}
+{% block title %}Browse Units — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ tenant_sidebar(user, 'units', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Browse Units</h1>
+      <p>Find your perfect apartment</p>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="floor-filter">
+      <button class="floor-btn active" onclick="filterFloor(this,'all')">All Floors</button>
+      {% for f in floors %}
+        <button class="floor-btn" onclick="filterFloor(this,'{{ f }}')">Floor {{ f }}</button>
+      {% endfor %}
+    </div>
+
+    <div class="units-grid">
+      {% for unit in units %}
+      <div class="unit-card {{ 'occupied' if unit.is_occupied else 'available' }}" data-floor="{{ unit.floor }}">
+        <span class="unit-badge {{ 'badge-occupied' if unit.is_occupied else 'badge-available' }}">
+          {{ 'Occupied' if unit.is_occupied else 'Available' }}
+        </span>
+        <div class="unit-number">Unit {{ unit.unit_number }}</div>
+        <div class="unit-type">{{ unit.unit_type }} · Floor {{ unit.floor }}</div>
+        <div class="unit-rent">₱{{ "{:,.0f}".format(unit.monthly_rent) }} <span>/mo</span></div>
+        {% if unit.description %}
+        <div class="unit-description">{{ unit.description }}</div>
+        {% endif %}
+        {% if unit.amenities %}
+        <div class="unit-amenities" style="margin-top:8px;">
+          {% for a in unit.amenities.split(',')[:3] %}
+            <span class="amenity-tag">{{ a.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if not unit.is_occupied %}
+        <div class="mt-4">
+          <a href="{{ url_for('main.tenant_inquire', unit_id=unit.id) }}" class="btn btn-gold btn-sm" style="width:100%;">Inquire →</a>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+<script>
+function filterFloor(btn, floor) {
+  document.querySelectorAll('.floor-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.unit-card').forEach(c => {
+    c.style.display = (floor === 'all' || c.dataset.floor === floor) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

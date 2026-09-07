@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import tenant_sidebar %}
+{% block title %}Dashboard — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ tenant_sidebar(user, 'dashboard', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Hello, {{ user.full_name.split()[0] }} 👋</h1>
+      <p>Here's your apartment overview for today</p>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% if rent_alerts %}
+    <div class="rent-alert-box">
+      <h3>🚨 Rent Payment Alerts</h3>
+      {% for alert in rent_alerts %}
+        <div class="alert alert-{{ 'danger' if alert.status == 'overdue' else 'warning' }}" style="margin-bottom:6px;">
+          {% if alert.status == 'overdue' %}
+            <strong>OVERDUE!</strong> ₱{{ "{:,.0f}".format(alert.record.amount) }} for {{ alert.record.month_year }} was due {{ alert.days|abs }} day(s) ago.
+          {% else %}
+            <strong>Due Soon!</strong> ₱{{ "{:,.0f}".format(alert.record.amount) }} for {{ alert.record.month_year }} is due in {{ alert.days }} day(s).
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon {{ 'navy' if unit else 'gold' }}">{{ '🏠' if unit else '🔍' }}</div>
+        <div>
+          <div class="stat-value">{{ unit.unit_number if unit else 'None' }}</div>
+          <div class="stat-label">My Unit</div>
+        </div>
+      </div>
+      {% if unit %}
+      <div class="stat-card">
+        <div class="stat-icon gold">💰</div>
+        <div>
+          <div class="stat-value">₱{{ "{:,.0f}".format(unit.monthly_rent) }}</div>
+          <div class="stat-label">Monthly Rent</div>
+        </div>
+      </div>
+      {% set unpaid = rent_records | selectattr('is_paid', 'equalto', 0) | list | length %}
+      <div class="stat-card">
+        <div class="stat-icon {{ 'rose' if unpaid > 0 else 'teal' }}">{{ '⚠️' if unpaid > 0 else '✅' }}</div>
+        <div>
+          <div class="stat-value">{{ unpaid }}</div>
+          <div class="stat-label">Unpaid Bills</div>
+        </div>
+      </div>
+      {% endif %}
+      <div class="stat-card">
+        <div class="stat-icon {{ 'rose' if unread_msgs > 0 else 'blue' }}">✉️</div>
+        <div>
+          <div class="stat-value">{{ unread_msgs }}</div>
+          <div class="stat-label">New Messages</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div>
+        {% if unit %}
+        <div class="card">
+          <div class="card-title">🏠 My Unit — {{ unit.unit_number }}</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">{{ unit.unit_type }} · Floor {{ unit.floor }}</div>
+          <div style="font-family:'Lora',serif;font-size:22px;font-weight:700;color:var(--gold);margin-bottom:14px;">
+            ₱{{ "{:,.0f}".format(unit.monthly_rent) }} <span style="font-size:12px;font-family:'Sora',sans-serif;color:var(--text-muted);font-weight:400;">/month</span>
+          </div>
+          {% if unit.occupancy_start %}
+          <div style="font-size:13px;color:var(--text-mid);margin-bottom:8px;">📅 Occupancy started: <strong>{{ unit.occupancy_start }}</strong></div>
+          {% endif %}
+          {% if unit.monthly_due_day %}
+          <div style="font-size:13px;color:var(--text-mid);margin-bottom:14px;">🗓 Monthly due: <strong>Day {{ unit.monthly_due_day }}</strong></div>
+          {% endif %}
+          {% if unit.amenities %}
+          <div class="unit-amenities">
+            {% for a in unit.amenities.split(',') %}
+              <span class="amenity-tag">{{ a.strip() }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <div class="mt-4">
+            <a href="{{ url_for('main.tenant_message') }}" class="btn btn-gold btn-sm">✉️ Message Landlord</a>
+          </div>
+        </div>
+        {% else %}
+        <div class="card">
+          <div class="card-title">🔍 No Unit Assigned</div>
+          <p class="text-muted text-small" style="margin-bottom:14px;">You don't have an assigned unit yet. Browse available units to find your home.</p>
+          <a href="{{ url_for('main.tenant_units') }}" class="btn btn-gold btn-sm">Browse Units</a>
+        </div>
+        {% endif %}
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">💳 Rent History</div>
+          {% if rent_records %}
+            {% for rr in rent_records[:4] %}
+              {% set status = get_rent_status(rr.due_date, rr.is_paid) %}
+              {% set label, color = get_rent_status_label(status) %}
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);">
+                <div>
+                  <div style="font-weight:600;font-size:14px;">{{ rr.month_year }}</div>
+                  <div style="font-size:12px;color:var(--text-muted);">Due: {{ rr.due_date }}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:700;font-size:14px;">₱{{ "{:,.0f}".format(rr.amount) }}</div>
+                  <span class="unit-badge badge-{{ status.replace('_','-') }}" style="position:static;display:inline-block;">{{ label }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-state" style="padding:20px;">
+              <div class="empty-icon">📋</div>
+              <p>No rent records yet</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

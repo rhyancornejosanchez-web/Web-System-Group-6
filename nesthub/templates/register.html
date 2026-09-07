@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Create Account — NestHub{% endblock %}
+{% block body %}
+<div class="login-page">
+  <!-- Left Hero Panel -->
+  <div class="login-left">
+    <div class="login-left-inner">
+      <div class="brand-mark">
+        <div class="brand-icon-box">🏠</div>
+        <div class="brand-wordmark">Nest<span>Hub</span></div>
+      </div>
+      <h1 class="login-hero-heading">
+        Join<br><em>NestHub today.</em>
+      </h1>
+      <p class="login-hero-sub">
+        Create your account as a tenant or landlord and start managing your apartment experience seamlessly.
+      </p>
+      <div class="login-stat-row">
+        <div class="login-stat">
+          <div class="login-stat-num">🔒</div>
+          <div class="login-stat-label">Secure</div>
+        </div>
+        <div class="login-stat">
+          <div class="login-stat-num">⚡</div>
+          <div class="login-stat-label">Fast Setup</div>
+        </div>
+        <div class="login-stat">
+          <div class="login-stat-num">✅</div>
+          <div class="login-stat-label">Free</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Form Panel -->
+  <div class="login-right">
+    <div class="login-form-card">
+      <h2 class="login-form-title">Create Account</h2>
+      <p class="login-form-sub">Choose your role and fill in your details</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('main.register') }}">
+        <!-- Role Selection -->
+        <div class="form-group">
+          <label>I am a</label>
+          <div class="register-role-row">
+            <label class="register-role-card">
+              <input type="radio" name="role" value="tenant" checked>
+              <div class="register-role-inner">
+                <span class="register-role-icon">👤</span>
+                <span class="register-role-label">Tenant</span>
+              </div>
+            </label>
+            <label class="register-role-card">
+              <input type="radio" name="role" value="landlord">
+              <div class="register-role-inner">
+                <span class="register-role-icon">🏠</span>
+                <span class="register-role-label">Landlord</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="full_name" placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Choose a username" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label>Email <span style="color:var(--text-muted);font-size:11px;">(optional)</span></label>
+          <input type="email" name="email" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label>Phone <span style="color:var(--text-muted);font-size:11px;">(optional)</span></label>
+          <input type="text" name="phone" placeholder="+63 9xx xxx xxxx">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Create a password" autocomplete="new-password" required>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input type="password" name="confirm_password" placeholder="Repeat your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Account →</button>
+      </form>
+
+      <div class="auth-switch">
+        Already have an account? <a href="{{ url_for('main.login') }}">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

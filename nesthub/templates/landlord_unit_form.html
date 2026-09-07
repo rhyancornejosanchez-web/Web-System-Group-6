@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import landlord_sidebar %}
+{% block title %}{{ 'Edit' if unit else 'Add' }} Unit — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ landlord_sidebar(user, 'units', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header-row">
+      <div class="page-header" style="margin-bottom:0;">
+        <h1>{{ 'Edit Unit ' + unit.unit_number if unit else 'Add New Unit' }}</h1>
+        <p>{{ 'Update unit details' if unit else 'Fill in details for the new unit' }}</p>
+      </div>
+      <a href="{{ url_for('main.landlord_units') }}" class="btn btn-outline btn-sm">← Back</a>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="form-card">
+      <form method="POST" action="{{ url_for('main.landlord_edit_unit', unit_id=unit.id) if unit else url_for('main.landlord_add_unit') }}">
+        <div class="form-row">
+          <div class="form-field">
+            <label>Unit Number *</label>
+            <input type="text" name="unit_number" value="{{ unit.unit_number if unit else '' }}" placeholder="e.g. 101, 205" required>
+          </div>
+          <div class="form-field">
+            <label>Floor *</label>
+            <input type="number" name="floor" value="{{ unit.floor if unit else '' }}" placeholder="e.g. 1, 2, 3" min="1" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label>Unit Type *</label>
+            <select name="unit_type" required>
+              <option value="">Select type…</option>
+              {% for t in ['Studio', '1 Bedroom', '2 Bedroom', '3 Bedroom', 'Penthouse', 'Loft'] %}
+              <option value="{{ t }}" {{ 'selected' if unit and unit.unit_type == t else '' }}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field">
+            <label>Monthly Rent (₱) *</label>
+            <input type="number" name="monthly_rent" value="{{ unit.monthly_rent if unit else '' }}" placeholder="e.g. 12000" min="0" step="500" required>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Amenities</label>
+          <input type="text" name="amenities" value="{{ unit.amenities if unit else '' }}" placeholder="e.g. WiFi, AC, Water, Parking (comma-separated)">
+        </div>
+        <div class="form-field">
+          <label>Description</label>
+          <textarea name="description" rows="4" placeholder="Describe the unit…">{{ unit.description if unit else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <button type="submit" class="btn btn-gold">{{ '💾 Save Changes' if unit else '➕ Add Unit' }}</button>
+          <a href="{{ url_for('main.landlord_units') }}" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

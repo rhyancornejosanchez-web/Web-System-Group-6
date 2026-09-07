@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Sign In — NestHub{% endblock %}
+{% block body %}
+<div class="login-page">
+  <!-- Left Hero Panel -->
+  <div class="login-left">
+    <div class="login-left-inner">
+      <div class="brand-mark">
+        <div class="brand-icon-box">🏠</div>
+        <div class="brand-wordmark">Nest<span>Hub</span></div>
+      </div>
+      <h1 class="login-hero-heading">
+        Manage your<br><em>property smarter.</em>
+      </h1>
+      <p class="login-hero-sub">
+        A complete apartment management portal for landlords and tenants — payments, messages, and more in one place.
+      </p>
+      <div class="login-stat-row">
+        <div class="login-stat">
+          <div class="login-stat-num">8+</div>
+          <div class="login-stat-label">Units</div>
+        </div>
+        <div class="login-stat">
+          <div class="login-stat-num">3</div>
+          <div class="login-stat-label">Floors</div>
+        </div>
+        <div class="login-stat">
+          <div class="login-stat-num">100%</div>
+          <div class="login-stat-label">Organised</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Form Panel -->
+  <div class="login-right">
+    <div class="login-form-card">
+      <h2 class="login-form-title">Welcome back</h2>
+      <p class="login-form-sub">Sign in to your portal</p>
+
+      <div class="role-toggle">
+        <button class="role-btn active" type="button">👤 Tenant</button>
+        <button class="role-btn" type="button">🏠 Landlord</button>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('main.login') }}">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Enter your username" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Sign In →</button>
+      </form>
+
+      <div class="auth-switch">
+        Don't have an account? <a href="{{ url_for('main.register') }}">Create one</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.role-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+{% endblock %}

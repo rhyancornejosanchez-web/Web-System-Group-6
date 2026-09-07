@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import landlord_sidebar %}
+{% block title %}Messages — NestHub{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ landlord_sidebar(user, 'messages', unread_msgs) }}
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Messages</h1>
+      <p>Inquiries and concerns from tenants</p>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% if messages %}
+    <div class="message-list">
+      {% for msg in messages %}
+      <div class="message-item">
+        <div class="message-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="message-from">👤 {{ msg.sender_name }}</span>
+            <span class="unit-badge badge-{{ msg.message_type }}" style="position:static;display:inline-block;">
+              {% if msg.message_type == 'inquiry' %}🔍 Inquiry
+              {% elif msg.message_type == 'concern' %}⚠️ Concern
+              {% else %}💬 General{% endif %}
+            </span>
+            {% if msg.unit_number %}
+            <span style="font-size:12px;color:var(--text-muted);">🏠 Unit {{ msg.unit_number }}</span>
+            {% endif %}
+          </div>
+          <span class="message-time">{{ msg.created_at[:16] }}</span>
+        </div>
+        <div class="message-subject" style="margin-top:8px;">{{ msg.subject }}</div>
+        <div style="font-size:14px;color:var(--text-mid);margin-top:6px;line-height:1.5;">{{ msg.body }}</div>
+
+        <div class="reply-form">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted);margin-bottom:8px;">Reply</div>
+          <form method="POST" action="{{ url_for('main.landlord_reply', msg_id=msg.id) }}">
+            <textarea name="reply_body" placeholder="Type your reply…" rows="3"></textarea>
+            <div style="margin-top:8px;">
+              <button type="submit" class="btn btn-gold btn-sm">📨 Send Reply</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">✉️</div>
+        <p>No messages yet. Tenants can message you about units or concerns.</p>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
