@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% from 'sidebar.html' import landlord_sidebar %}
+{% block title %}Applications — RentWise{% endblock %}
+{% block body %}
+<div class="app-wrapper">
+  {{ landlord_sidebar(user, 'applications', unread_msgs, pending_count) }}
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Tenant Applications</h1>
+      <p>Review new sign-ups before they can access the tenant portal</p>
+    </div>
+
+    {% with flash_msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in flash_msgs %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% if applications %}
+    <div class="message-list">
+      {% for app in applications %}
+      <div class="message-item">
+        <div class="message-header">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="message-from">👤 {{ app.full_name }}</span>
+            <span style="font-size:12px;color:var(--text-muted);">@{{ app.username }}</span>
+          </div>
+          <span class="message-time">Applied {{ app.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+        </div>
+        <div style="font-size:13px;color:var(--text-mid);margin-top:8px;">
+          {% if app.email %}<div>✉️ {{ app.email }}</div>{% endif %}
+          {% if app.phone %}<div>📱 {{ app.phone }}</div>{% endif %}
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <form method="POST" action="{{ url_for('main.landlord_approve_application', user_id=app.id) }}">
+            <button type="submit" class="btn btn-gold btn-sm">✅ Approve</button>
+          </form>
+          <form method="POST" action="{{ url_for('main.landlord_reject_application', user_id=app.id) }}" onsubmit="return confirm('Reject and permanently remove this application?');">
+            <button type="submit" class="btn btn-danger btn-sm">🚫 Reject</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No pending applications. New tenant sign-ups will show up here for your review.</p>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

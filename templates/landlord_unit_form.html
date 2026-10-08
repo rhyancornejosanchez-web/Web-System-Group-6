@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% from 'sidebar.html' import landlord_sidebar %}
-{% block title %}{{ 'Edit' if unit else 'Add' }} Unit — NestHub{% endblock %}
+{% block title %}{{ 'Edit' if unit else 'Add' }} Unit — RentWise{% endblock %}
 {% block body %}
 <div class="app-wrapper">
-  {{ landlord_sidebar(user, 'units', unread_msgs) }}
+  {{ landlord_sidebar(user, 'units', unread_msgs, pending_count) }}
   <main class="main-content">
     <div class="page-header-row">
       <div class="page-header" style="margin-bottom:0;">

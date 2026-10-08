@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% from 'sidebar.html' import tenant_sidebar %}
-{% block title %}Messages — NestHub{% endblock %}
+{% block title %}Messages — RentWise{% endblock %}
 {% block body %}
 <div class="app-wrapper">
   {{ tenant_sidebar(user, 'messages', unread_msgs) }}
@@ -29,7 +29,7 @@
             <span class="unit-badge badge-{{ msg.message_type }}" style="position:static;display:inline-block;">{{ msg.message_type | capitalize }}</span>
             {% if msg.unit_number %}<span style="font-size:12px;color:var(--text-muted);">Unit {{ msg.unit_number }}</span>{% endif %}
           </div>
-          <span class="message-time">{{ msg.created_at[:16] }}</span>
+          <span class="message-time">{{ msg.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
         </div>
         <div class="message-subject">{{ msg.subject }}</div>
         <div class="message-preview" style="margin-top:5px;">{{ msg.body }}</div>

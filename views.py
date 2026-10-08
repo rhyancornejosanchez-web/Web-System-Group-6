@@ -38,11 +38,17 @@ def login():
             flash('Username and password required.', 'danger')
             return render_template('login.html')
         conn = get_db()
-        user = row_to_dict(conn.execute("SELECT * FROM user WHERE username=?", (username,)).fetchone())
+        user = row_to_dict(conn.execute("SELECT * FROM user WHERE username=%s", (username,)).fetchone())
         conn.close()
         if user and check_password(password, user['password']):
             if user['role'] != selected_role:
                 flash(f"This account is registered as a {user['role']}. Please switch the toggle to \"{user['role'].capitalize()}\" and sign in again.", 'warning')
+                return render_template('login.html')
+            if user.get('status') == 'pending':
+                flash("Your application is still awaiting landlord approval. Please check back later.", 'warning')
+                return render_template('login.html')
+            if user.get('status') == 'rejected':
+                flash("Your application was not approved. Please contact the landlord for more information.", 'danger')
                 return render_template('login.html')
             session['user_id'] = user['id']
             session['user_role'] = user['role']
@@ -69,18 +75,18 @@ def register():
             flash('Passwords do not match.', 'danger')
             return render_template('register.html')
         conn = get_db()
-        existing = conn.execute("SELECT id FROM user WHERE username=?", (username,)).fetchone()
+        existing = conn.execute("SELECT id FROM user WHERE username=%s", (username,)).fetchone()
         if existing:
             conn.close()
             flash('Username already taken.', 'danger')
             return render_template('register.html')
         conn.execute(
-            "INSERT INTO user (username, password, role, full_name, email, phone) VALUES (?,?,?,?,?,?)",
-            (username, hash_password(password), role, full_name, email, phone)
+            "INSERT INTO user (username, password, role, full_name, email, phone, status) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            (username, hash_password(password), role, full_name, email, phone, 'pending')
         )
         conn.commit()
         conn.close()
-        flash('Account created! Please sign in.', 'success')
+        flash('Application submitted! The landlord will review your account before you can sign in.', 'success')
         return redirect(url_for('main.login'))
     return render_template('register.html')
 
@@ -94,7 +100,7 @@ def logout():
 
 def get_unread_msgs(uid):
     conn = get_db()
-    n = conn.execute("SELECT COUNT(*) FROM message WHERE receiver_id=? AND is_read=0", (uid,)).fetchone()[0]
+    n = conn.execute("SELECT COUNT(*) AS cnt FROM message WHERE receiver_id=%s AND is_read=0", (uid,)).fetchone()['cnt']
     conn.close()
     return n
 
@@ -105,13 +111,13 @@ def get_unread_msgs(uid):
 def tenant_dashboard():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
-    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE tenant_id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
+    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE tenant_id=%s", (uid,)).fetchone())
     rent_records = []
     rent_alerts = []
     if unit:
         rent_records = [row_to_dict(r) for r in conn.execute(
-            "SELECT * FROM rent_record WHERE unit_id=? AND tenant_id=? ORDER BY due_date DESC", (unit['id'], uid)).fetchall()]
+            "SELECT * FROM rent_record WHERE unit_id=%s AND tenant_id=%s ORDER BY due_date DESC", (unit['id'], uid)).fetchall()]
         for rr in rent_records:
             status = get_rent_status(rr['due_date'], rr['is_paid'])
             if status in ('overdue','due_soon'):
@@ -128,7 +134,7 @@ def tenant_dashboard():
 def tenant_units():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     units = [row_to_dict(r) for r in conn.execute("SELECT * FROM unit ORDER BY floor, unit_number").fetchall()]
     floors = sorted(set(u['floor'] for u in units))
     unread_msgs = get_unread_msgs(uid)
@@ -140,8 +146,8 @@ def tenant_units():
 def tenant_inquire(unit_id):
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
-    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=?", (unit_id,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
+    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=%s", (unit_id,)).fetchone())
     if not unit:
         conn.close()
         return redirect(url_for('main.tenant_units'))
@@ -154,7 +160,7 @@ def tenant_inquire(unit_id):
         subject = request.form.get('subject','').strip()
         body = request.form.get('body','').strip()
         if subject and body:
-            conn.execute("INSERT INTO message (sender_id,receiver_id,subject,body,message_type,unit_id) VALUES (?,?,?,?,?,?)",
+            conn.execute("INSERT INTO message (sender_id,receiver_id,subject,body,message_type,unit_id) VALUES (%s,%s,%s,%s,%s,%s)",
                 (uid, landlord['id'], subject, body, 'inquiry', unit_id))
             conn.commit()
             conn.close()
@@ -170,13 +176,13 @@ def tenant_inquire(unit_id):
 def tenant_message():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     landlord = row_to_dict(conn.execute("SELECT * FROM user WHERE role='landlord' LIMIT 1").fetchone())
     if request.method == 'POST':
         subject = request.form.get('subject','').strip()
         body = request.form.get('body','').strip()
         if subject and body:
-            conn.execute("INSERT INTO message (sender_id,receiver_id,subject,body,message_type) VALUES (?,?,?,?,?)",
+            conn.execute("INSERT INTO message (sender_id,receiver_id,subject,body,message_type) VALUES (%s,%s,%s,%s,%s)",
                 (uid, landlord['id'], subject, body, 'concern'))
             conn.commit()
             conn.close()
@@ -192,15 +198,15 @@ def tenant_message():
 def tenant_messages():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     messages = [row_to_dict(r) for r in conn.execute(
         """SELECT m.*, u.full_name as sender_name, un.unit_number as unit_number
            FROM message m JOIN user u ON u.id=m.sender_id
            LEFT JOIN unit un ON un.id=m.unit_id
-           WHERE m.sender_id=? OR m.receiver_id=?
+           WHERE m.sender_id=%s OR m.receiver_id=%s
            ORDER BY m.created_at DESC""", (uid, uid)).fetchall()]
     # Mark messages received by this tenant as read
-    conn.execute("UPDATE message SET is_read=1 WHERE receiver_id=?", (uid,))
+    conn.execute("UPDATE message SET is_read=1 WHERE receiver_id=%s", (uid,))
     conn.commit()
     unread_msgs = 0
     conn.close()
@@ -213,41 +219,43 @@ def tenant_messages():
 def landlord_dashboard():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     units = [row_to_dict(r) for r in conn.execute("SELECT * FROM unit").fetchall()]
     occupied = sum(1 for u in units if u['is_occupied'])
     available = len(units) - occupied
     unread_msgs = get_unread_msgs(uid)
     overdue_rents = [row_to_dict(r) for r in conn.execute("SELECT * FROM rent_record WHERE is_paid=0").fetchall()]
     overdue_count = sum(1 for r in overdue_rents if get_rent_status(r['due_date'], r['is_paid']) == 'overdue')
+    pending_count = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
     conn.close()
     return render_template('landlord_dashboard.html', user=user, units=units, occupied=occupied,
         available=available, unread_msgs=unread_msgs,
-        overdue_count=overdue_count)
+        overdue_count=overdue_count, pending_count=pending_count)
 
 @main_bp.route('/landlord/units')
 @login_required(role='landlord')
 def landlord_units():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     units = [row_to_dict(r) for r in conn.execute(
         "SELECT u.*, t.full_name as tenant_name FROM unit u LEFT JOIN user t ON t.id=u.tenant_id ORDER BY u.floor, u.unit_number").fetchall()]
     unread_msgs = get_unread_msgs(uid)
-    # Tenants without a unit assigned (for occupy modal)
+    # Tenants without a unit assigned (for occupy modal) — only approved tenants are assignable
     tenants_list = [row_to_dict(r) for r in conn.execute(
-        "SELECT id, username, full_name FROM user WHERE role='tenant'").fetchall()]
+        "SELECT id, username, full_name FROM user WHERE role='tenant' AND status='approved'").fetchall()]
     import json
     tenants_json = json.dumps(tenants_list)
+    pending_count = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
     conn.close()
-    return render_template('landlord_unit.html', user=user, units=units, unread_msgs=unread_msgs, tenants_json=tenants_json)
+    return render_template('landlord_unit.html', user=user, units=units, unread_msgs=unread_msgs, tenants_json=tenants_json, pending_count=pending_count)
 
 @main_bp.route('/landlord/units/add', methods=['GET','POST'])
 @login_required(role='landlord')
 def landlord_add_unit():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     if request.method == 'POST':
         un = request.form.get('unit_number','').strip()
         floor = request.form.get('floor','')
@@ -256,11 +264,11 @@ def landlord_add_unit():
         desc = request.form.get('description','').strip()
         amen = request.form.get('amenities','').strip()
         try:
-            existing = conn.execute("SELECT id FROM unit WHERE unit_number=?", (un,)).fetchone()
+            existing = conn.execute("SELECT id FROM unit WHERE unit_number=%s", (un,)).fetchone()
             if existing:
                 flash('Unit number already exists.', 'danger')
             else:
-                conn.execute("INSERT INTO unit (unit_number,floor,unit_type,monthly_rent,description,amenities) VALUES (?,?,?,?,?,?)",
+                conn.execute("INSERT INTO unit (unit_number,floor,unit_type,monthly_rent,description,amenities) VALUES (%s,%s,%s,%s,%s,%s)",
                     (un, int(floor), ut, float(rent), desc, amen))
                 conn.commit()
                 conn.close()
@@ -269,16 +277,17 @@ def landlord_add_unit():
         except (ValueError, TypeError):
             flash('Invalid floor or rent value.', 'danger')
     unread_msgs = get_unread_msgs(uid)
+    pending_count = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
     conn.close()
-    return render_template('landlord_unit_form.html', user=user, unit=None, unread_msgs=unread_msgs)
+    return render_template('landlord_unit_form.html', user=user, unit=None, unread_msgs=unread_msgs, pending_count=pending_count)
 
 @main_bp.route('/landlord/units/edit/<int:unit_id>', methods=['GET','POST'])
 @login_required(role='landlord')
 def landlord_edit_unit(unit_id):
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
-    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=?", (unit_id,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
+    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=%s", (unit_id,)).fetchone())
     if not unit:
         conn.close()
         return redirect(url_for('main.landlord_units'))
@@ -290,7 +299,7 @@ def landlord_edit_unit(unit_id):
         desc = request.form.get('description','').strip()
         amen = request.form.get('amenities','').strip()
         try:
-            conn.execute("UPDATE unit SET unit_number=?,floor=?,unit_type=?,monthly_rent=?,description=?,amenities=? WHERE id=?",
+            conn.execute("UPDATE unit SET unit_number=%s,floor=%s,unit_type=%s,monthly_rent=%s,description=%s,amenities=%s WHERE id=%s",
                 (un, int(floor), ut, float(rent), desc, amen, unit_id))
             conn.commit()
             conn.close()
@@ -299,20 +308,21 @@ def landlord_edit_unit(unit_id):
         except (ValueError, TypeError):
             flash('Invalid floor or rent.', 'danger')
     unread_msgs = get_unread_msgs(uid)
+    pending_count = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
     conn.close()
-    return render_template('landlord_unit_form.html', user=user, unit=unit, unread_msgs=unread_msgs)
+    return render_template('landlord_unit_form.html', user=user, unit=unit, unread_msgs=unread_msgs, pending_count=pending_count)
 
 @main_bp.route('/landlord/units/delete/<int:unit_id>', methods=['POST'])
 @login_required(role='landlord')
 def landlord_delete_unit(unit_id):
     conn = get_db()
-    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=?", (unit_id,)).fetchone())
+    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=%s", (unit_id,)).fetchone())
     if unit and unit['is_occupied']:
         flash('Cannot delete an occupied unit.', 'danger')
     elif unit:
-        conn.execute("UPDATE message SET unit_id=NULL WHERE unit_id=?", (unit_id,))
-        conn.execute("DELETE FROM rent_record WHERE unit_id=?", (unit_id,))
-        conn.execute("DELETE FROM unit WHERE id=?", (unit_id,))
+        conn.execute("UPDATE message SET unit_id=NULL WHERE unit_id=%s", (unit_id,))
+        conn.execute("DELETE FROM rent_record WHERE unit_id=%s", (unit_id,))
+        conn.execute("DELETE FROM unit WHERE id=%s", (unit_id,))
         conn.commit()
         flash('Unit deleted.', 'success')
     conn.close()
@@ -323,7 +333,7 @@ def landlord_delete_unit(unit_id):
 def landlord_set_occupancy(unit_id):
     action = request.form.get('action')  # 'occupy' or 'vacate'
     conn = get_db()
-    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=?", (unit_id,)).fetchone())
+    unit = row_to_dict(conn.execute("SELECT * FROM unit WHERE id=%s", (unit_id,)).fetchone())
     if not unit:
         conn.close()
         flash('Unit not found.', 'danger')
@@ -345,7 +355,7 @@ def landlord_set_occupancy(unit_id):
             due_day_int = 1
         # Assign unit
         conn.execute(
-            "UPDATE unit SET is_occupied=1, tenant_id=?, occupancy_start=?, monthly_due_day=? WHERE id=?",
+            "UPDATE unit SET is_occupied=1, tenant_id=%s, occupancy_start=%s, monthly_due_day=%s WHERE id=%s",
             (tenant_id, occupancy_start, due_day_int, unit_id)
         )
         # Generate first rent record
@@ -364,21 +374,21 @@ def landlord_set_occupancy(unit_id):
                 first_due = date(start.year, start.month+1, min(due_day_int, max_day2))
         month_year = first_due.strftime('%B %Y')
         existing = conn.execute(
-            "SELECT id FROM rent_record WHERE unit_id=? AND tenant_id=? AND month_year=?",
+            "SELECT id FROM rent_record WHERE unit_id=%s AND tenant_id=%s AND month_year=%s",
             (unit_id, tenant_id, month_year)
         ).fetchone()
         if not existing:
             conn.execute(
-                "INSERT INTO rent_record (unit_id,tenant_id,amount,due_date,month_year) VALUES (?,?,?,?,?)",
+                "INSERT INTO rent_record (unit_id,tenant_id,amount,due_date,month_year) VALUES (%s,%s,%s,%s,%s)",
                 (unit_id, tenant_id, unit['monthly_rent'], str(first_due), month_year)
             )
         conn.commit()
-        tenant_user = row_to_dict(conn.execute("SELECT full_name FROM user WHERE id=?", (tenant_id,)).fetchone())
+        tenant_user = row_to_dict(conn.execute("SELECT full_name FROM user WHERE id=%s", (tenant_id,)).fetchone())
         conn.close()
         tname = tenant_user['full_name'] if tenant_user else 'Tenant'
         flash(f"Unit {unit['unit_number']} is now occupied by {tname}. First due date: {first_due}.", 'success')
     elif action == 'vacate':
-        conn.execute("UPDATE unit SET is_occupied=0, tenant_id=NULL, occupancy_start=NULL WHERE id=?", (unit_id,))
+        conn.execute("UPDATE unit SET is_occupied=0, tenant_id=NULL, occupancy_start=NULL WHERE id=%s", (unit_id,))
         conn.commit()
         conn.close()
         flash(f"Unit {unit['unit_number']} is now available.", 'success')
@@ -391,28 +401,29 @@ def landlord_set_occupancy(unit_id):
 def landlord_messages():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     messages = [row_to_dict(r) for r in conn.execute(
         """SELECT m.*, u.full_name as sender_name, un.unit_number as unit_number
            FROM message m JOIN user u ON u.id=m.sender_id
            LEFT JOIN unit un ON un.id=m.unit_id
-           WHERE m.receiver_id=? ORDER BY m.created_at DESC""", (uid,)).fetchall()]
-    conn.execute("UPDATE message SET is_read=1 WHERE receiver_id=?", (uid,))
+           WHERE m.receiver_id=%s ORDER BY m.created_at DESC""", (uid,)).fetchall()]
+    conn.execute("UPDATE message SET is_read=1 WHERE receiver_id=%s", (uid,))
     conn.commit()
     unread_msgs = 0
+    pending_count = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
     conn.close()
-    return render_template('landlord_messages.html', user=user, messages=messages, unread_msgs=unread_msgs)
+    return render_template('landlord_messages.html', user=user, messages=messages, unread_msgs=unread_msgs, pending_count=pending_count)
 
 @main_bp.route('/landlord/messages/reply/<int:msg_id>', methods=['POST'])
 @login_required(role='landlord')
 def landlord_reply(msg_id):
     uid = session['user_id']
     conn = get_db()
-    original = row_to_dict(conn.execute("SELECT * FROM message WHERE id=?", (msg_id,)).fetchone())
+    original = row_to_dict(conn.execute("SELECT * FROM message WHERE id=%s", (msg_id,)).fetchone())
     body = request.form.get('reply_body','').strip()
     if body and original:
         original_subject = original['subject']
-        conn.execute("INSERT INTO message (sender_id,receiver_id,subject,body,message_type) VALUES (?,?,?,?,?)",
+        conn.execute("INSERT INTO message (sender_id,receiver_id,subject,body,message_type) VALUES (%s,%s,%s,%s,%s)",
             (uid, original['sender_id'], f"Re: {original_subject}", body, 'general'))
         conn.commit()
         flash('Reply sent!', 'success')
@@ -424,20 +435,70 @@ def landlord_reply(msg_id):
 def landlord_tenants():
     uid = session['user_id']
     conn = get_db()
-    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=?", (uid,)).fetchone())
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
     tenants = [row_to_dict(r) for r in conn.execute(
-        "SELECT u.*, un.id as unit_id, un.unit_number, un.unit_type, un.monthly_rent FROM user u LEFT JOIN unit un ON un.tenant_id=u.id WHERE u.role='tenant'").fetchall()]
+        "SELECT u.*, un.id as unit_id, un.unit_number, un.unit_type, un.monthly_rent FROM user u LEFT JOIN unit un ON un.tenant_id=u.id WHERE u.role='tenant' AND u.status='approved'").fetchall()]
     rent_statuses = {}
     for t in tenants:
         if t['unit_id']:
             rr = row_to_dict(conn.execute(
-                "SELECT * FROM rent_record WHERE unit_id=? AND tenant_id=? ORDER BY due_date DESC LIMIT 1",
+                "SELECT * FROM rent_record WHERE unit_id=%s AND tenant_id=%s ORDER BY due_date DESC LIMIT 1",
                 (t['unit_id'], t['id'])).fetchone())
             if rr:
                 status = get_rent_status(rr['due_date'], rr['is_paid'])
                 label, color = get_rent_status_label(status)
                 rent_statuses[t['id']] = {'status': status, 'label': label, 'color': color, 'record': rr}
     unread_msgs = get_unread_msgs(uid)
+    pending_count = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
     conn.close()
     return render_template('landlord_tenants.html', user=user, tenants=tenants,
-        rent_statuses=rent_statuses, unread_msgs=unread_msgs)
+        rent_statuses=rent_statuses, unread_msgs=unread_msgs, pending_count=pending_count)
+
+def get_pending_count():
+    conn = get_db()
+    n = conn.execute("SELECT COUNT(*) AS cnt FROM user WHERE role='tenant' AND status='pending'").fetchone()['cnt']
+    conn.close()
+    return n
+
+@main_bp.route('/landlord/applications')
+@login_required(role='landlord')
+def landlord_applications():
+    uid = session['user_id']
+    conn = get_db()
+    user = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s", (uid,)).fetchone())
+    applications = [row_to_dict(r) for r in conn.execute(
+        "SELECT * FROM user WHERE role='tenant' AND status='pending' ORDER BY created_at ASC").fetchall()]
+    unread_msgs = get_unread_msgs(uid)
+    pending_count = len(applications)
+    conn.close()
+    return render_template('landlord_applications.html', user=user, applications=applications,
+        unread_msgs=unread_msgs, pending_count=pending_count)
+
+@main_bp.route('/landlord/applications/approve/<int:user_id>', methods=['POST'])
+@login_required(role='landlord')
+def landlord_approve_application(user_id):
+    conn = get_db()
+    applicant = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s AND role='tenant' AND status='pending'", (user_id,)).fetchone())
+    if applicant:
+        conn.execute("UPDATE user SET status='approved' WHERE id=%s", (user_id,))
+        conn.commit()
+        flash(f"{applicant['full_name']}'s application has been approved. They can now sign in.", 'success')
+    else:
+        flash('Application not found or already processed.', 'danger')
+    conn.close()
+    return redirect(url_for('main.landlord_applications'))
+
+@main_bp.route('/landlord/applications/reject/<int:user_id>', methods=['POST'])
+@login_required(role='landlord')
+def landlord_reject_application(user_id):
+    conn = get_db()
+    applicant = row_to_dict(conn.execute("SELECT * FROM user WHERE id=%s AND role='tenant' AND status='pending'", (user_id,)).fetchone())
+    if applicant:
+        # Fully remove rejected applications so spam/troll sign-ups don't pile up.
+        conn.execute("DELETE FROM user WHERE id=%s", (user_id,))
+        conn.commit()
+        flash(f"{applicant['full_name']}'s application has been rejected and removed.", 'success')
+    else:
+        flash('Application not found or already processed.', 'danger')
+    conn.close()
+    return redirect(url_for('main.landlord_applications'))

@@ -1,10 +1,12 @@
 {% macro tenant_sidebar(user, active, unread_msgs=0) %}
-<aside class="sidebar">
+<button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="logo-row">
       <div class="logo-box">🏠</div>
       <div>
-        <h2>Nest<span>Hub</span></h2>
+        <h2>Rent<span>Wise</span></h2>
         <p>Tenant Portal</p>
       </div>
     </div>
@@ -34,15 +36,30 @@
     <a href="{{ url_for('main.logout') }}" class="logout-btn">🚪 Sign Out</a>
   </div>
 </aside>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('sidebar-open');
+  document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('sidebar-open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+}
+document.querySelectorAll('#sidebar .nav-item').forEach(function(el){
+  el.addEventListener('click', closeSidebar);
+});
+</script>
 {% endmacro %}
 
-{% macro landlord_sidebar(user, active, unread_msgs=0) %}
-<aside class="sidebar">
+{% macro landlord_sidebar(user, active, unread_msgs=0, pending_count=0) %}
+<button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-brand">
     <div class="logo-row">
       <div class="logo-box">🏠</div>
       <div>
-        <h2>Nest<span>Hub</span></h2>
+        <h2>Rent<span>Wise</span></h2>
         <p>Landlord Portal</p>
       </div>
     </div>
@@ -65,6 +82,10 @@
     <a href="{{ url_for('main.landlord_tenants') }}" class="nav-item {% if active == 'tenants' %}active{% endif %}">
       <span class="nav-icon">👥</span> Tenants
     </a>
+    <a href="{{ url_for('main.landlord_applications') }}" class="nav-item {% if active == 'applications' %}active{% endif %}">
+      <span class="nav-icon">📝</span> Applications
+      {% if pending_count > 0 %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
+    </a>
     <div class="nav-section-label">Communications</div>
     <a href="{{ url_for('main.landlord_messages') }}" class="nav-item {% if active == 'messages' %}active{% endif %}">
       <span class="nav-icon">✉️</span> Messages
@@ -75,4 +96,17 @@
     <a href="{{ url_for('main.logout') }}" class="logout-btn">🚪 Sign Out</a>
   </div>
 </aside>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('sidebar-open');
+  document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('sidebar-open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+}
+document.querySelectorAll('#sidebar .nav-item').forEach(function(el){
+  el.addEventListener('click', closeSidebar);
+});
+</script>
 {% endmacro %}

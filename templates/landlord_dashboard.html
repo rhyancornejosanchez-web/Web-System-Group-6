@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% from 'sidebar.html' import landlord_sidebar %}
-{% block title %}Dashboard — NestHub{% endblock %}
+{% block title %}Dashboard — RentWise{% endblock %}
 {% block body %}
 <div class="app-wrapper">
-  {{ landlord_sidebar(user, 'dashboard', unread_msgs) }}
+  {{ landlord_sidebar(user, 'dashboard', unread_msgs, pending_count) }}
   <main class="main-content">
     <div class="page-header">
       <h1>Dashboard</h1>
@@ -37,6 +37,10 @@
         <div class="stat-icon {{ 'rose' if overdue_count > 0 else 'gold' }}">💰</div>
         <div><div class="stat-value">{{ overdue_count }}</div><div class="stat-label">Overdue Rents</div></div>
       </div>
+      <div class="stat-card">
+        <div class="stat-icon {{ 'rose' if pending_count > 0 else 'teal' }}">📝</div>
+        <div><div class="stat-value">{{ pending_count }}</div><div class="stat-label">Pending Applications</div></div>
+      </div>
     </div>
 
     <div class="mt-6">
@@ -46,6 +50,9 @@
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
         <a href="{{ url_for('main.landlord_units') }}" class="btn btn-gold">🏠 Manage Units</a>
         <a href="{{ url_for('main.landlord_tenants') }}" class="btn btn-outline">👥 View Tenants</a>
+        <a href="{{ url_for('main.landlord_applications') }}" class="btn btn-outline">
+          📝 Applications{% if pending_count > 0 %} <span class="inline-badge">{{ pending_count }}</span>{% endif %}
+        </a>
         <a href="{{ url_for('main.landlord_messages') }}" class="btn btn-outline">
           ✉️ Messages{% if unread_msgs > 0 %} <span class="inline-badge">{{ unread_msgs }}</span>{% endif %}
         </a>
